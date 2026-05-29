@@ -488,10 +488,10 @@ module.exports = function initSessionHud(ctx) {
       fullscreenable: false,
       skipTaskbar: true,
       alwaysOnTop: !isMac,
-      focusable: false,
+      focusable: ctx.isWayland ? true : false,
       hasShadow: false,
       backgroundColor: "#00000000",
-      ...(isLinux ? { type: LINUX_WINDOW_TYPE } : {}),
+      ...(isLinux && !ctx.isWayland ? { type: LINUX_WINDOW_TYPE } : {}),
       ...(isMac ? { type: "panel" } : {}),
       webPreferences: {
         preload: path.join(__dirname, "preload-session-hud.js"),

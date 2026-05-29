@@ -562,13 +562,14 @@ function showPermissionBubble(permEntry) {
     resizable: false,
     skipTaskbar: true,
     hasShadow: false,
-    ...(isLinux ? { type: LINUX_WINDOW_TYPE } : {}),
+    ...(isLinux && !ctx.isWayland ? { type: LINUX_WINDOW_TYPE } : {}),
     ...(isMac ? { type: "panel" } : {}),
     // Elicitation needs keyboard focus for the Other/textarea input path.
     // Permission prompts stay non-focusable so they don't steal focus from
     // CC's terminal (which would trigger false "User answered in terminal"
     // denials — see bub.focus() note below).
-    focusable: !!permEntry.isElicitation,
+    // Wayland: must be focusable for interaction.
+    focusable: ctx.isWayland ? true : !!permEntry.isElicitation,
     webPreferences: {
       preload: path.join(__dirname, "preload-bubble.js"),
       nodeIntegration: false,

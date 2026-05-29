@@ -33,6 +33,7 @@ function createPetWindowRuntime(options = {}) {
   const isWin = !!options.isWin;
   const isMac = !!options.isMac;
   const isLinux = !!options.isLinux;
+  const isWayland = !!options.isWayland;
   const linuxWindowType = options.linuxWindowType;
   const topmostLevel = options.topmostLevel;
   const getRenderWindow = options.getRenderWindow || (() => null);
@@ -363,10 +364,31 @@ function createPetWindowRuntime(options = {}) {
   function syncHitWin() {
     const hitWin = getHitWindow();
     const win = getRenderWindow();
-    if (!isLiveWindow(hitWin) || !isLiveWindow(win)) return;
-    // Keep the captured pointer stable while dragging. Repositioning the input
-    // window mid-drag can break pointer capture on Windows.
+    if (!isLiveWindow(win)) return;
     if (dragLocked) return;
+
+    // Wayland: single-window — update shape on the render window so only the
+    // hitbox area receives input, margins are click-through.
+    if (isWayland) {
+      const bounds = getPetWindowBounds();
+      const hit = getHitRectScreen(bounds);
+      if (!hit) return;
+      const hx = Math.round(hit.left - bounds.x);
+      const hy = Math.round(hit.top - bounds.y);
+      const hw = Math.round(hit.right - hit.left);
+      const hh = Math.round(hit.bottom - hit.top);
+      if (hw <= 0 || hh <= 0) return;
+      if (hw !== hitShapeWidth || hh !== hitShapeHeight) {
+        hitShapeWidth = hw;
+        hitShapeHeight = hh;
+        win.setShape([{ x: hx, y: hy, width: hw, height: hh }]);
+      }
+      repositionSessionHud();
+      return;
+    }
+
+    // X11: two-window — reposition the separate hit window
+    if (!isLiveWindow(hitWin)) return;
     const bounds = getPetWindowBounds();
     const hit = getHitRectScreen(bounds);
     if (!hit) return;
@@ -376,7 +398,6 @@ function createPetWindowRuntime(options = {}) {
     const h = Math.round(hit.bottom - hit.top);
     if (w <= 0 || h <= 0) return;
     hitWin.setBounds({ x, y, width: w, height: h });
-    // Update shape if hitbox dimensions changed (e.g. after resize).
     if (w !== hitShapeWidth || h !== hitShapeHeight) {
       hitShapeWidth = w;
       hitShapeHeight = h;
@@ -417,13 +438,14 @@ function createPetWindowRuntime(options = {}) {
       hasShadow: false,
       fullscreenable: false,
       enableLargerThanScreen: true,
-      ...(isLinux ? { type: linuxWindowType } : {}),
+      ...(isLinux && !isWayland ? { type: linuxWindowType } : {}),
       ...(isMac ? { type: "panel", roundedCorners: false } : {}),
       webPreferences: {
         preload: optionsArg.preloadPath,
         backgroundThrottling: false,
         additionalArguments: [
           "--theme-config=" + JSON.stringify(optionsArg.themeConfig),
+          ...(isWayland ? ["--is-wayland"] : []),
         ],
       },
     });
@@ -431,7 +453,7 @@ function createPetWindowRuntime(options = {}) {
     if (typeof optionsArg.setRenderWindow === "function") {
       optionsArg.setRenderWindow(renderWin);
     }
-    renderWin.setFocusable(false);
+    renderWin.setFocusable(isWayland ? true : false);  // Wayland: must be focusable for -webkit-app-region:drag
 
     if (isLinux) {
       renderWin.on("close", (event) => {
@@ -468,6 +490,9 @@ function createPetWindowRuntime(options = {}) {
   }
 
   function createHitWindow(optionsArg = {}) {
+    // Wayland: single-window mode — no separate hit window needed
+    if (isWayland) return null;
+
     const BrowserWindow = optionsArg.BrowserWindow;
     if (typeof BrowserWindow !== "function") {
       throw new Error("createHitWindow requires BrowserWindow");

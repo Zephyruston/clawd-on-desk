@@ -1382,3 +1382,35 @@ if (!currentDisplayedSvg && _idleFollowSvg) {
   currentIdleSvg = _idleFollowSvg;
   swapToFile(_idleFollowSvg, "idle");
 }
+
+// ── Wayland: render window handles input directly (no separate hit window) ──
+if (window.isWayland) {
+  (function setupWaylandInput() {
+    // Enable native drag on the render window
+    clipLayer.style.webkitAppRegion = "drag";
+    clipLayer.style.cursor = "grab";
+    // The <object> within the drag region would block drag — mark it no-drag
+    if (clawdEl) clawdEl.style.webkitAppRegion = "no-drag";
+
+    // Context menu on right-click
+    window.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      window.electronAPI.sendContextMenu();
+    });
+
+    // Click reactions: short click (no significant drag) triggers reaction
+    let waylandPointerDown = null;
+    window.addEventListener("pointerdown", (e) => {
+      waylandPointerDown = { x: e.screenX, y: e.screenY };
+      window.electronAPI.sendPointerDown();
+    });
+    window.addEventListener("pointerup", (e) => {
+      if (!waylandPointerDown) return;
+      const dx = e.screenX - waylandPointerDown.x;
+      const dy = e.screenY - waylandPointerDown.y;
+      const moved = Math.sqrt(dx * dx + dy * dy) > 4;
+      waylandPointerDown = null;
+      window.electronAPI.sendPointerUp();
+    });
+  })();
+}

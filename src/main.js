@@ -54,9 +54,16 @@ const { getAllAgents } = require("../agents/registry");
 // MUST be set before any BrowserWindow is created (before app.whenReady)
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 
+
 const isMac = process.platform === "darwin";
 const isLinux = process.platform === "linux";
 const isWin = process.platform === "win32";
+// Wayland session: even though hooks/shared-process.js forces XWayland via
+// --ozone-platform=x11, the two-window architecture (render + hit) breaks under
+// GNOME/Mutter. Switching to single-window + -webkit-app-region:drag fixes it.
+const isWaylandSession = isLinux && (
+  process.env.XDG_SESSION_TYPE === "wayland" || !!process.env.WAYLAND_DISPLAY
+);
 const LINUX_WINDOW_TYPE = "toolbar";
 const THEME_SWITCH_FADE_OUT_MS = 140;
 const THEME_SWITCH_FADE_IN_MS = 180;
@@ -535,6 +542,7 @@ const petWindowRuntime = createPetWindowRuntime({
   isWin,
   isMac,
   isLinux,
+  isWayland: isWaylandSession,
   linuxWindowType: LINUX_WINDOW_TYPE,
   topmostLevel: WIN_TOPMOST_LEVEL,
   getRenderWindow: () => win,
@@ -920,6 +928,7 @@ function moveWindowForDrag() { return petWindowRuntime.moveWindowForDrag(); }
 const topmostRuntime = createTopmostRuntime({
   isWin,
   isMac,
+  isWayland: isWaylandSession,
   getWin: () => win,
   getHitWin: () => hitWin,
   getPendingPermissions: () => pendingPermissions,
@@ -958,6 +967,7 @@ const _permCtx = {
   get win() { return win; },
   get lang() { return lang; },
   get sessions() { return sessions; },
+  get isWayland() { return isWaylandSession; },
   get bubbleFollowPet() { return bubbleFollowPet; },
   get permDebugLog() { return permDebugLog; },
   get doNotDisturb() { return doNotDisturb; },
@@ -1023,6 +1033,7 @@ function getPendingPermissionFocusEntry(sessionId) {
 
 const _updateBubbleCtx = {
   get win() { return win; },
+  get isWayland() { return isWaylandSession; },
   get bubbleFollowPet() { return bubbleFollowPet; },
   get petHidden() { return petWindowRuntime.isPetHidden(); },
   getBubblePolicy: getRuntimeBubblePolicy,
@@ -1305,6 +1316,7 @@ sendDashboardI18n = _dashboard.sendI18n;
 
 const _sessionHud = require("./session-hud")({
   get win() { return win; },
+  get isWayland() { return isWaylandSession; },
   get petHidden() { return petWindowRuntime.isPetHidden(); },
   get sessionHudEnabled() { return sessionHudEnabled; },
   get sessionHudShowStateLabels() { return sessionHudShowStateLabels; },
@@ -1381,6 +1393,20 @@ function sessionLog(msg) {
   const { rotatedAppend } = require("./log-rotate");
   rotatedAppend(sessionDebugLog, `[${new Date().toISOString()}] ${msg}\n`);
 }
+
+// ── Wayland: render window input relay (no separate hit window) ──
+ipcMain.on("render-context-menu", (_event) => {
+  if (!isWaylandSession) return;
+  showPetContextMenu({});
+});
+ipcMain.on("render-pointer-down", () => {
+  if (!isWaylandSession) return;
+  sendToRenderer("start-drag-reaction");
+});
+ipcMain.on("render-pointer-up", () => {
+  if (!isWaylandSession) return;
+  sendToRenderer("end-drag-reaction");
+});
 
 ipcMain.on("sound-playback-error", (_event, payload) => {
   const phase = payload && typeof payload.phase === "string"

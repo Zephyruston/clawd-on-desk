@@ -320,9 +320,22 @@ function buildElectronLaunchConfig(projectDir, options = {}) {
 
   const entry = typeof options.entry === "string" ? options.entry : ".";
   const forwardedArgs = Array.isArray(options.forwardedArgs) ? options.forwardedArgs : [];
-  const args = disableSandbox
-    ? [entry, "--no-sandbox", "--disable-setuid-sandbox", ...forwardedArgs]
-    : [entry, ...forwardedArgs];
+
+  // On Wayland sessions, force XWayland so that always-on-top, setShape,
+  // and programmatic window positioning work. Users can override by passing
+  // --ozone-platform=wayland explicitly.
+  const isWaylandSession = env.XDG_SESSION_TYPE === "wayland" || !!env.WAYLAND_DISPLAY;
+  const hasExplicitOzone = forwardedArgs.some(a => a.startsWith("--ozone-platform="));
+  const xwaylandArgs = (platform === "linux" && isWaylandSession && !hasExplicitOzone)
+    ? ["--ozone-platform=x11"]
+    : [];
+
+  let args;
+  if (disableSandbox) {
+    args = [entry, "--no-sandbox", "--disable-setuid-sandbox", ...xwaylandArgs, ...forwardedArgs];
+  } else {
+    args = [entry, ...xwaylandArgs, ...forwardedArgs];
+  }
 
   return { args, env, cwd: projectDir };
 }

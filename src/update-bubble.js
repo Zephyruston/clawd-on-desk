@@ -179,8 +179,8 @@ module.exports = function initUpdateBubble(ctx) {
       resizable: false,
       skipTaskbar: true,
       hasShadow: false,
-      focusable: false,
-      ...(isLinux ? { type: LINUX_WINDOW_TYPE } : {}),
+      focusable: ctx.isWayland ? true : false,
+      ...(isLinux && !ctx.isWayland ? { type: LINUX_WINDOW_TYPE } : {}),
       ...(isMac ? { type: "panel" } : {}),
       webPreferences: {
         preload: path.join(__dirname, "preload-update-bubble.js"),

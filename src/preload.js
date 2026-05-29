@@ -3,8 +3,10 @@ const { contextBridge, ipcRenderer } = require("electron");
 // Parse theme config from additionalArguments (synchronous, available on first load)
 const themeArg = process.argv.find(a => a.startsWith("--theme-config="));
 const themeConfig = themeArg ? JSON.parse(themeArg.slice("--theme-config=".length)) : null;
+const isWayland = process.argv.includes("--is-wayland");
 
 contextBridge.exposeInMainWorld("themeConfig", themeConfig);
+contextBridge.exposeInMainWorld("isWayland", isWayland);
 
 contextBridge.exposeInMainWorld("electronAPI", {
   // Theme config push (for hot-switch; additionalArguments won't update on reload)
@@ -33,4 +35,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   pauseCursorPolling: () => ipcRenderer.send("pause-cursor-polling"),
   resumeFromReaction: () => ipcRenderer.send("resume-from-reaction"),
   setLowPowerIdlePaused: (paused) => ipcRenderer.send("low-power-idle-paused", !!paused),
+  // Wayland: render window handles input directly (no separate hit window)
+  sendContextMenu: () => ipcRenderer.send("render-context-menu"),
+  sendPointerDown: () => ipcRenderer.send("render-pointer-down"),
+  sendPointerUp: () => ipcRenderer.send("render-pointer-up"),
 });

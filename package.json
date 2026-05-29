@@ -154,6 +154,7 @@
         "to": "sidecars/cc-connect-clawd"
       }
     ],
+    "afterPack": "./build/linux-after-pack.js",
     "publish": [
       {
         "provider": "github",

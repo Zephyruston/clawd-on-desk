@@ -20,6 +20,7 @@ function defaultGetter(value) {
 function createTopmostRuntime(options = {}) {
   const isWin = options.isWin != null ? !!options.isWin : process.platform === "win32";
   const isMac = options.isMac != null ? !!options.isMac : process.platform === "darwin";
+  const isWayland = !!options.isWayland;
   const getWin = defaultGetter(options.getWin || null);
   const getHitWin = defaultGetter(options.getHitWin || null);
   const getPendingPermissions = options.getPendingPermissions || (() => []);
@@ -52,11 +53,17 @@ function createTopmostRuntime(options = {}) {
   let pendingNudgeRestore = null;
 
   function reassertWinTopmost() {
-    if (!isWin) return;
     const win = getWin();
-    const hitWin = getHitWin();
-    if (isLiveWindow(win)) win.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
-    if (isLiveWindow(hitWin)) hitWin.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
+    if (isWin) {
+      if (isLiveWindow(win)) win.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
+      const hitWin = getHitWin();
+      if (isLiveWindow(hitWin)) hitWin.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
+      return;
+    }
+    // Wayland/XWayland: reassert alwaysOnTop without platform-specific level
+    if (isWayland && isLiveWindow(win)) {
+      win.setAlwaysOnTop(true);
+    }
   }
 
   function reapplyMacVisibility() {
@@ -101,7 +108,7 @@ function createTopmostRuntime(options = {}) {
   }
 
   function scheduleHwndRecovery() {
-    if (!isWin) return;
+    if (!isWin && !isWayland) return;
     if (hwndRecoveryTimer) clearTimeoutFn(hwndRecoveryTimer);
     hwndRecoveryTimer = setTimeoutFn(() => {
       hwndRecoveryTimer = null;
@@ -149,9 +156,13 @@ function createTopmostRuntime(options = {}) {
   }
 
   function guardAlwaysOnTop(winToGuard) {
-    if (!isWin || !winToGuard || typeof winToGuard.on !== "function") return;
+    if ((!isWin && !isWayland) || !winToGuard || typeof winToGuard.on !== "function") return;
     winToGuard.on("always-on-top-changed", (_event, isOnTop) => {
       if (isOnTop || !isLiveWindow(winToGuard)) return;
+      if (isWayland) {
+        winToGuard.setAlwaysOnTop(true);
+        return;
+      }
       winToGuard.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
       if (
         winToGuard === getWin()
@@ -183,10 +194,10 @@ function createTopmostRuntime(options = {}) {
   }
 
   function startTopmostWatchdog() {
-    if (!isWin || topmostWatchdog) return;
+    if ((!isWin && !isWayland) || topmostWatchdog) return;
     topmostWatchdog = setIntervalFn(() => {
       reassertWindowAndTaskbar(getWin());
-      reassertWindowAndTaskbar(getHitWin());
+      if (!isWayland) reassertWindowAndTaskbar(getHitWin());
 
       for (const perm of getPendingPermissions()) {
         const bubble = perm && perm.bubble;
