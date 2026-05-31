@@ -11,6 +11,8 @@
     "build:win:all": "electron-builder --win nsis:x64 nsis:arm64",
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
+    "build:linux:dir": "electron-builder --linux dir",
+    "build:flatpak": "npm run build:linux:dir && flatpak-builder --user --install --force-clean build/flatpak/_build build/flatpak/com.clawd.on-desk.yml",
     "build:all": "electron-builder --win --mac --linux",
     "fetch:sidecars": "node scripts/fetch-sidecar-binaries.js",
     "verify:sidecars": "node scripts/verify-sidecar-binaries.js",
