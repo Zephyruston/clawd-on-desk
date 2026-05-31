@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Clawd on Desk
+Comment=Desktop pet that visualizes your AI coding agent's status
+Exec=start-clawd
+Icon=com.clawd.on-desk
+Categories=Utility;
+Terminal=false
+StartupNotify=false
+X-Flatpak=com.clawd.on-desk
