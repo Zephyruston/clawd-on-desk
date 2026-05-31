@@ -185,3 +185,17 @@ Copilot CLI 同步走 `<COPILOT_HOME 或 ~/.copilot>/hooks/hooks.json`，marker-
 ## Do Not Revisit
 
 Language 子菜单底部截断是 Electron 透明窗口 + Windows DWM 的底层兼容问题。不要再尝试通过切换 `alwaysOnTop`、透明窗策略或 JS 菜单布局修它。
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues. Use the `gh` CLI for all operations. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles use their default label strings: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo — read `CONTEXT.md` and `docs/adr/` at the repo root. Neither exists yet; skills will proceed silently. See `docs/agents/domain.md`.

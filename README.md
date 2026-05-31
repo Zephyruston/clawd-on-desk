@@ -142,7 +142,7 @@ For normal use, download the latest prebuilt installer from **[GitHub Releases](
 
 - **Windows**: `Clawd-on-Desk-Setup-<version>-x64.exe` or `Clawd-on-Desk-Setup-<version>-arm64.exe`
 - **macOS**: `.dmg`
-- **Linux**: `.AppImage` or `.deb`
+- **Linux**: `.AppImage`, `.deb`, or **[Flatpak](#linux-flatpak)** (recommended for Wayland)
 
 Launch Clawd after installing it. Fresh installs auto-sync Claude Code and Codex only; install other local agent integrations from **Settings → Agents** when you need them.
 
@@ -165,6 +165,30 @@ npm start
 Want to run Claude Code / Codex CLI on a remote server and surface state plus permission bubbles in your local Clawd? Use the in-app **Settings → Remote SSH → One-click deploy**. Full walkthrough, Doctor boundary, and FAQ: **[docs/guides/guide-remote-ssh.md](docs/guides/guide-remote-ssh.md)**
 
 For the official `Codex + WSL` status, Clawd's current implementation boundary, and why this is easy to misread, see: **[docs/guides/codex-wsl-clarification.md](docs/guides/codex-wsl-clarification.md)**
+
+### Linux (Flatpak)
+
+On Wayland-based Linux desktops (Fedora, GNOME, etc.), Electron's native Wayland backend breaks `setAlwaysOnTop`, `setBounds`, and `setShape` — critical APIs for a desktop pet. The Flatpak build solves this by running Electron under XWayland via `--socket=x11`, where all these APIs work correctly.
+
+**Prerequisites:** `flatpak` and `flatpak-builder` (install via your package manager), plus the Freedesktop SDK:
+
+```bash
+flatpak install -y flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
+```
+
+**Build and install:**
+
+```bash
+npm run build:flatpak
+```
+
+**Run:**
+
+```bash
+flatpak run com.clawd.on-desk
+```
+
+**How it works:** The Flatpak's finish-args grant `--socket=x11` (no `--socket=wayland`), forcing Electron to use XWayland. The launcher wrapper passes `--ozone-platform=x11` explicitly as a belt-and-suspenders measure. Hook scripts are synced to `~/.clawd/hooks/` at startup so Claude Code (running outside the sandbox) can execute them.
 
 ## Known Limitations
 
