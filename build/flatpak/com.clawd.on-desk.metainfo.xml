@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.clawd.on-desk</id>
+  <name>Clawd on Desk</name>
+  <summary>Desktop pet that visualizes your AI coding agent's status</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>
+      Clawd is a desktop pet that lives on your screen and reacts to your AI coding
+      agents (Claude Code, Codex CLI, Copilot CLI, Gemini CLI, and more). It plays
+      pixel-art animations to show what your agent is doing — thinking, coding,
+      waiting for permission, or idle.
+    </p>
+  </description>
+  <url type="homepage">https://github.com/rullerzhou-afk/clawd-on-desk</url>
+  <releases>
+    <release version="0.8.1" date="2025-05-01"/>
+  </releases>
+</component>

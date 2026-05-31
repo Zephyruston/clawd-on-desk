@@ -14,6 +14,8 @@
     "build:mac:arm64": "electron-builder --mac dmg:arm64",
     "build:linux": "electron-builder --linux",
     "build:linux:x64": "electron-builder --linux AppImage:x64 deb:x64",
+    "build:linux:dir": "electron-builder --linux dir",
+    "build:flatpak": "npm run build:linux:dir && flatpak-builder --user --install --force-clean build/flatpak/_build build/flatpak/com.clawd.on-desk.yml",
     "build:all": "electron-builder --win --mac --linux",
     "verify:electron": "node scripts/verify-electron-install.js",
     "postinstall": "node scripts/verify-electron-install.js --context postinstall",

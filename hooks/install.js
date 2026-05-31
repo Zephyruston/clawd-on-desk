@@ -497,11 +497,11 @@ const AUTO_START_HOOK_TIMEOUT_SECONDS = 15;
 // (src/claude-hook-health.js) compare against. Computing this in two places
 // would let the installer and the health inspector silently drift apart.
 function getClaudeHookScriptPath() {
-  return asarUnpackedPath(path.resolve(__dirname, "clawd-hook.js").replace(/\\/g, "/"));
+  return asarUnpackedPath(path.resolve(getHooksDir(), "clawd-hook.js").replace(/\\/g, "/"));
 }
 
 function getClaudeAutoStartScriptPath() {
-  return asarUnpackedPath(path.resolve(__dirname, "auto-start.js").replace(/\\/g, "/"));
+  return asarUnpackedPath(path.resolve(getHooksDir(), "auto-start.js").replace(/\\/g, "/"));
 }
 
 function buildCommandHookSpec(nodeBin, scriptPath, args = "", options = {}) {
@@ -1098,6 +1098,12 @@ function resolveConfiguredNodeBinSync(options, settings) {
   if (envCandidate) return configuredNodeResolution(envCandidate);
 
   return configuredNodeResolution("node");
+}
+
+// When running inside Flatpak, hooks scripts live at a host-accessible path
+// so Claude Code (which runs outside the sandbox) can execute them.
+function getHooksDir() {
+  return process.env.CLAWD_HOOKS_DIR || __dirname;
 }
 
 function registerHooks(options = {}) {
