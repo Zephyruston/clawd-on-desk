@@ -1,0 +1,76 @@
+app-id: com.clawd.on-desk
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: start-clawd
+
+finish-args:
+  # X11 only — force XWayland so setAlwaysOnTop, setBounds, setShape all work.
+  # No --socket=wayland: Electron must auto-detect X11 and avoid Ozone/Wayland.
+  - --socket=x11
+  # HTTP server on 127.0.0.1:23333-23337 for agent hooks/permission
+  - --share=network
+  # Hook management: reads/writes ~/.claude/settings.json, watches for changes
+  - --filesystem=~/.claude
+  # Runtime state: ~/.clawd/runtime.json (port, pid, etc.)
+  - --filesystem=~/.clawd
+  # Claude Code binary for version detection (needed for versioned hook sync)
+  - --filesystem=~/.local/bin:ro
+  - --filesystem=~/.local/share/claude:ro
+  - --filesystem=~/.local/share/fnm:ro
+  # Sound effects
+  - --socket=pulseaudio
+  # GPU acceleration for Electron rendering
+  - --device=dri
+  # Desktop notifications (update available, etc.)
+  - --talk-name=org.freedesktop.Notifications
+
+modules:
+  - name: clawd-on-desk
+    buildsystem: simple
+    build-commands:
+      # Copy all Electron runtime files into /app
+      - cp -a * /app/
+      # Launcher script (--no-sandbox: Flatpak blocks SUID chrome-sandbox)
+      - mkdir -p /app/bin
+      - install -Dm755 start-clawd.sh /app/bin/start-clawd
+      # Desktop integration
+      - mkdir -p /app/share/applications
+      - install -Dm644 com.clawd.on-desk.desktop /app/share/applications/
+      - mkdir -p /app/share/metainfo
+      - install -Dm644 com.clawd.on-desk.metainfo.xml /app/share/metainfo/
+      # Icons
+      - for size in 16 32 48 64 128 256 512; do
+          mkdir -p /app/share/icons/hicolor/${size}x${size}/apps;
+          install -Dm644 icon-${size}.png /app/share/icons/hicolor/${size}x${size}/apps/com.clawd.on-desk.png;
+        done
+    sources:
+      - type: dir
+        path: ../../dist/linux-unpacked
+      - type: file
+        path: start-clawd.sh
+      - type: file
+        path: com.clawd.on-desk.desktop
+      - type: file
+        path: com.clawd.on-desk.metainfo.xml
+      - type: file
+        path: ../../assets/icons/16x16.png
+        dest-filename: icon-16.png
+      - type: file
+        path: ../../assets/icons/32x32.png
+        dest-filename: icon-32.png
+      - type: file
+        path: ../../assets/icons/48x48.png
+        dest-filename: icon-48.png
+      - type: file
+        path: ../../assets/icons/64x64.png
+        dest-filename: icon-64.png
+      - type: file
+        path: ../../assets/icons/128x128.png
+        dest-filename: icon-128.png
+      - type: file
+        path: ../../assets/icons/256x256.png
+        dest-filename: icon-256.png
+      - type: file
+        path: ../../assets/icons/512x512.png
+        dest-filename: icon-512.png
