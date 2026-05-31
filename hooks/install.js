@@ -760,10 +760,16 @@ function reconcileVersionedHooks(settings, supportedEvents, versionInfo) {
  * @param {{ version: string|null, source: string|null, status: "known"|"unknown" }} [options.claudeVersionInfo]
  * @returns {{ added: number, skipped: number, updated: number, removed: number, version: string|null, versionStatus: "known"|"unknown", versionSource: string|null }}
  */
+// When running inside Flatpak, hooks scripts live at a host-accessible path
+// so Claude Code (which runs outside the sandbox) can execute them.
+function getHooksDir() {
+  return process.env.CLAWD_HOOKS_DIR || __dirname;
+}
+
 function registerHooks(options = {}) {
   const settingsPath = options.settingsPath || path.join(os.homedir(), ".claude", "settings.json");
   const hookPort = getHookServerPort(options.port);
-  const hookScript = asarUnpackedPath(path.resolve(__dirname, "clawd-hook.js").replace(/\\/g, "/"));
+  const hookScript = asarUnpackedPath(path.resolve(getHooksDir(), "clawd-hook.js").replace(/\\/g, "/"));
   const platform = options.platform || process.platform;
 
   // Read existing settings
@@ -864,7 +870,7 @@ function registerHooks(options = {}) {
 
   // Register auto-start hook for SessionStart (launches app if not running)
   if (options.autoStart) {
-    const autoStartScript = asarUnpackedPath(path.resolve(__dirname, "auto-start.js").replace(/\\/g, "/"));
+    const autoStartScript = asarUnpackedPath(path.resolve(getHooksDir(), "auto-start.js").replace(/\\/g, "/"));
 
     if (!Array.isArray(settings.hooks.SessionStart)) {
       settings.hooks.SessionStart = [];
@@ -991,7 +997,7 @@ function registerHooks(options = {}) {
 async function registerHooksAsync(options = {}) {
   const settingsPath = options.settingsPath || path.join(os.homedir(), ".claude", "settings.json");
   const hookPort = getHookServerPort(options.port);
-  const hookScript = asarUnpackedPath(path.resolve(__dirname, "clawd-hook.js").replace(/\\/g, "/"));
+  const hookScript = asarUnpackedPath(path.resolve(getHooksDir(), "clawd-hook.js").replace(/\\/g, "/"));
   const platform = options.platform || process.platform;
 
   let settings = {};
@@ -1079,7 +1085,7 @@ async function registerHooksAsync(options = {}) {
   }
 
   if (options.autoStart) {
-    const autoStartScript = asarUnpackedPath(path.resolve(__dirname, "auto-start.js").replace(/\\/g, "/"));
+    const autoStartScript = asarUnpackedPath(path.resolve(getHooksDir(), "auto-start.js").replace(/\\/g, "/"));
 
     if (!Array.isArray(settings.hooks.SessionStart)) {
       settings.hooks.SessionStart = [];
