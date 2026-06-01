@@ -171,9 +171,20 @@ async function _uninstallClaudeHooksNow() {
 function _writeSystemOpenAtLogin(enabled) {
   if (isLinux) {
     const launchScript = path.join(__dirname, "..", "launch.js");
-    const execCmd = app.isPackaged
-      ? `"${process.env.APPIMAGE || app.getPath("exe")}"`
-      : `node "${launchScript}"`;
+    let execCmd;
+    if (app.isPackaged) {
+      // Flatpak: app.getPath("exe") returns a sandbox-internal path like
+      // /app/bin/start-clawd that the host cannot execute. Use the Flatpak
+      // run command instead so the autostart .desktop works on the host.
+      const flatpakId = process.env.FLATPAK_ID;
+      if (flatpakId) {
+        execCmd = `/usr/bin/flatpak run ${flatpakId}`;
+      } else {
+        execCmd = `"${process.env.APPIMAGE || app.getPath("exe")}"`;
+      }
+    } else {
+      execCmd = `node "${launchScript}"`;
+    }
     loginItemHelpers.linuxSetOpenAtLogin(enabled, { execCmd });
     return;
   }
