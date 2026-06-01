@@ -151,6 +151,20 @@ function launchApp(options = {}) {
     : null;
   const isPackaged = hooksDir.includes("app.asar") || !!appImage;
 
+  // Flatpak: hooks are copied to ~/.clawd/hooks/ by the start wrapper.
+  // We're running on the host so sandbox-internal paths don't work — use
+  // flatpak run instead.
+  const flatpakId = process.env.CLAWD_FLATPAK_ID || null;
+  if (flatpakId) {
+    try {
+      spawn("flatpak", ["run", flatpakId], { detached: true, stdio: "ignore" }).unref();
+      return;
+    } catch (err) {
+      process.stderr.write(`clawd auto-start: flatpak launch failed: ${err.message}\n`);
+      return;
+    }
+  }
+
   try {
     if (isPackaged) {
       if (isWin) {

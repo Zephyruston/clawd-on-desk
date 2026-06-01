@@ -529,6 +529,17 @@ function buildCommandHookSpec(nodeBin, scriptPath, args = "", options = {}) {
     return hook;
   };
 
+  // Build the env-var prefix string (e.g. "CLAWD_FLATPAK_ID=com.clawd.on-desk ").
+  // POSIX shell syntax: VAR1=val1 VAR2=val2 command
+  let envPrefix = "";
+  if (options.envVars && typeof options.envVars === "object") {
+    for (const [key, value] of Object.entries(options.envVars)) {
+      if (key && value != null) {
+        envPrefix += `${key}=${value} `;
+      }
+    }
+  }
+
   // Remote hook deployment targets POSIX shells over SSH and relies on bash-style
   // env-prefix syntax (`CLAWD_REMOTE=1 cmd`). Keep that legacy form even if tests
   // force win32 here; Windows + remote is not a supported deployment target.
@@ -543,7 +554,7 @@ function buildCommandHookSpec(nodeBin, scriptPath, args = "", options = {}) {
     return withHookOptions({
       type: "command",
       shell: "powershell",
-      command: `& ${shellQuotedCommand}`,
+      command: `& ${envPrefix}${shellQuotedCommand}`,
     });
   }
 
@@ -563,7 +574,7 @@ function buildCommandHookSpec(nodeBin, scriptPath, args = "", options = {}) {
   // quoted commands via the default sh -c.
   return withHookOptions({
     type: "command",
-    command: shellQuotedCommand,
+    command: `${envPrefix}${shellQuotedCommand}`,
   });
 }
 
@@ -1236,11 +1247,15 @@ function registerHooks(options = {}) {
       changed = true;
     }
 
+    const autoStartEnvVars = process.env.FLATPAK_ID
+      ? { CLAWD_FLATPAK_ID: process.env.FLATPAK_ID }
+      : undefined;
     const autoStartHook = buildCommandHookSpec(nodeBin, autoStartScript, "", {
       platform,
       wslDistro,
       async: true,
       timeout: AUTO_START_HOOK_TIMEOUT_SECONDS,
+      envVars: autoStartEnvVars,
     });
     const autoStartSync = syncCommandHook(settings.hooks.SessionStart, AUTO_START_MARKER, autoStartHook);
     if (!autoStartSync.found) {
@@ -1548,11 +1563,15 @@ async function registerHooksAsync(options = {}) {
       changed = true;
     }
 
+    const autoStartEnvVarsAsync = process.env.FLATPAK_ID
+      ? { CLAWD_FLATPAK_ID: process.env.FLATPAK_ID }
+      : undefined;
     const autoStartHook = buildCommandHookSpec(nodeBin, autoStartScript, "", {
       platform,
       wslDistro,
       async: true,
       timeout: AUTO_START_HOOK_TIMEOUT_SECONDS,
+      envVars: autoStartEnvVarsAsync,
     });
     const autoStartSync = syncCommandHook(settings.hooks.SessionStart, AUTO_START_MARKER, autoStartHook);
     if (!autoStartSync.found) {

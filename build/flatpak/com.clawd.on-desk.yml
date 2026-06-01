@@ -22,6 +22,8 @@ finish-args:
   - --socket=pulseaudio
   # GPU acceleration for Electron rendering
   - --device=dri
+  # Autostart .desktop file (~/.config/autostart/clawd-on-desk.desktop)
+  - --filesystem=~/.config/autostart:create
   # Desktop notifications (update available, etc.)
   - --talk-name=org.freedesktop.Notifications
 
