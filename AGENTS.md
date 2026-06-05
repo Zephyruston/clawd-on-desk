@@ -16,6 +16,8 @@ npm run build:win:arm64
 npm run build:win:all
 npm run build:mac
 npm run build:linux
+npm run build:linux:dir
+npm run build:flatpak
 npm run build:all
 npm install
 npm test
@@ -185,6 +187,47 @@ Copilot CLI 同步走 `<COPILOT_HOME 或 ~/.copilot>/hooks/hooks.json`，marker-
 ## Do Not Revisit
 
 Language 子菜单底部截断是 Electron 透明窗口 + Windows DWM 的底层兼容问题。不要再尝试通过切换 `alwaysOnTop`、透明窗策略或 JS 菜单布局修它。
+
+## Flatpak 打包（Linux Wayland 兼容）
+
+此仓库维护了一个 Flatpak manifest，用于在 Linux 下以 XWayland 模式运行 Clawd，解决 Electron 在 Wayland 下的 `setAlwaysOnTop`、`setBounds`、透明窗口拖拽等兼容问题。
+
+**构建流程**：`electron-builder --linux dir` → `flatpak-builder` 打包并安装到用户本地。
+
+```bash
+npm run build:flatpak    # 完整构建：electron dir + flatpak-builder --install
+```
+
+**关键设计决策**（详见 `build/flatpak/`）：
+- Flatpak 不接 `--socket=wayland`，强制 X11/XWayland，Electron 走 `--ozone-platform=x11`
+- chrome-sandbox 被 Flatpak 拦截，必须 `--no-sandbox`
+- Hook 脚本在启动时从 `/app` 拷贝到 `~/.clawd/hooks/`，因为 Agent（Claude Code 等）跑在沙箱外
+- Autostart `.desktop` 用 `flatpak run com.clawd.on-desk` 而非沙箱内部路径
+- `package.json` version 和 `metainfo.xml` releases 条目需保持与上游一致
+
+**上游 release 同步工作流**：
+
+当上游推送新 release tag（如 `v0.10.0`），按以下步骤同步：
+
+```bash
+# 1. 拉取上游 tag
+git fetch upstream --tags
+
+# 2. 将 feature/flatpak-packaging rebase 到新 tag
+git rebase v0.10.0 feature/flatpak-packaging
+
+# 3. 更新 metainfo.xml：在 <releases> 顶部插入新版本条目
+#     编辑 build/flatpak/com.clawd.on-desk.metainfo.xml
+
+# 4. 提交版本更新
+git add build/flatpak/com.clawd.on-desk.metainfo.xml
+git commit -m "chore: bump metainfo to v0.10.0"
+
+# 5. 构建并安装
+npm run build:flatpak
+```
+
+如有冲突，集中在 `src/main.js`、`hooks/install.js`、`hooks/auto-start.js`、`package.json` 这几个文件。
 
 ## Agent skills
 
