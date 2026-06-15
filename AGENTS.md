@@ -207,27 +207,41 @@ npm run build:flatpak    # 完整构建：electron dir + flatpak-builder --insta
 
 **上游 release 同步工作流**：
 
-当上游推送新 release tag（如 `v0.10.0`），按以下步骤同步：
+⚠️ **CRITICAL** — 当用户说以下任何一句时，执行的是 Flatpak 重建流程，**不是** `git push --tags`：
+- "同步上游 release tag"
+- "上游出新版本了"
+- "跟上上游"
+- "上游发布 X.Y.Z"
+- "帮我同步上游"
+
+**完整步骤（必须全部执行）**：
 
 ```bash
 # 1. 拉取上游 tag
 git fetch upstream --tags
 
-# 2. 将 feature/flatpak-packaging rebase 到新 tag
-git rebase v0.10.0 feature/flatpak-packaging
+# 2. 将 feature/flatpak-packaging rebase 到新 tag（如有本地改动先 stash）
+git stash push --include-untracked -m "temp stash before rebase"
+git rebase v<NEW_VERSION> feature/flatpak-packaging
+git stash pop
 
 # 3. 更新 metainfo.xml：在 <releases> 顶部插入新版本条目
-#     编辑 build/flatpak/com.clawd.on-desk.metainfo.xml
+#    build/flatpak/com.clawd.on-desk.metainfo.xml
 
-# 4. 提交版本更新
+# 4. 提交 metainfo 版本更新
 git add build/flatpak/com.clawd.on-desk.metainfo.xml
-git commit -m "chore: bump metainfo to v0.10.0"
+git commit -m "chore: bump metainfo to v<NEW_VERSION>"
 
-# 5. 构建并安装
+# 5. 构建 Flatpak 并安装
 npm run build:flatpak
+
+# 6. 推送分支到 origin
+git push --force-with-lease origin feature/flatpak-packaging
 ```
 
-如有冲突，集中在 `src/main.js`、`hooks/install.js`、`hooks/auto-start.js`、`package.json` 这几个文件。
+- `package.json` version 跟着上游 tag 走，rebase 后自动更新，无需手动改
+- 冲突集中在 `src/main.js`、`hooks/install.js`、`hooks/auto-start.js`、`package.json`
+- **绝对不要**只做 `git push --tags`——那只是把 tag 推到 origin，跟 Flatpak 构建毫无关系
 
 ## Agent skills
 
