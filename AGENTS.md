@@ -266,6 +266,10 @@ Language 子菜单底部截断是 Electron 透明窗口 + Windows DWM 的底层�
 
 **构建流程**：`electron-builder --linux dir` → `flatpak-builder` 打包并安装到用户本地。
 
+⚠️ **构建必须带国内源 + tmux 挂后台轮询**（具体命令见下方同步工作流第 5 步）：
+- 上游升级 Electron 后缓存里没有对应 zip，electron-builder 直连 GitHub 下载会卡死在 `SYN-SENT`（表现：CPU 0%、`dist/` 零增长、日志停在 packaging 行）。构建前必须 export `ELECTRON_MIRROR` / `ELECTRON_BUILDER_BINARIES_MIRROR`（npmmirror），凡上游动了 Electron 版本这条是硬要求
+- 不要前台裸跑阻塞整个会话，也不要管道后台（`| tail`）+ TaskOutput 长阻塞——管道缓冲让日志假死、任务还容易被意外终止。一律 `tmux new-session -d` 挂后台、日志落文件，每 ~10s 轮询日志直到 tmux session 退出，再验证安装版本
+
 ```bash
 npm run build:flatpak    # 完整构建：electron dir + flatpak-builder --install
 ```
@@ -304,8 +308,11 @@ git stash pop
 git add build/flatpak/com.clawd.on-desk.metainfo.xml
 git commit -m "chore: bump metainfo to v<NEW_VERSION>"
 
-# 5. 构建 Flatpak 并安装
-npm run build:flatpak
+# 5. 构建 Flatpak 并安装 —— 国内源必须带上（上游升级 Electron 时直连 GitHub 下载会
+#    SYN-SENT 卡死）；tmux 挂后台 + 轮询日志，不要前台阻塞等待，也不要管道后台 + TaskOutput
+tmux new-session -d -s clawd-flatpak 'export ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ && npm run build:flatpak > /tmp/clawd-flatpak-build.log 2>&1'
+#    每 ~10s tail 一次 /tmp/clawd-flatpak-build.log，直到 tmux session 退出，然后验证：
+flatpak list --user | rg clawd    # 应显示新版本号
 
 # 6. 推送分支到 origin
 git push --force-with-lease origin feature/flatpak-packaging
